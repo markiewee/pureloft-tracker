@@ -100,6 +100,10 @@
     </select>
     <span class="conn off" id="conn">offline</span>
   </div>
+  <div class="me">
+    <label>Project:</label>
+    <select id="proj"></select>
+  </div>
   <div class="bar">
     <button id="reportBtn">📋 Copy progress report</button>
   </div>
@@ -198,6 +202,15 @@ who.addEventListener('change', function(){
 });
 superhint.style.display = isSuper() ? 'block' : 'none';
 
+// project selector
+var proj=document.getElementById('proj');
+var curProj = localStorage.getItem('pureloft_proj') || CHECKLISTS[0].id;
+CHECKLISTS.forEach(function(cl){ var o=document.createElement('option'); o.value=cl.id; o.textContent=cl.title; proj.appendChild(o); });
+var allo=document.createElement('option'); allo.value='all'; allo.textContent='— All projects —'; proj.appendChild(allo);
+if(!CHECKLISTS.some(function(c){return c.id===curProj;}) && curProj!=='all') curProj=CHECKLISTS[0].id;
+proj.value=curProj;
+proj.addEventListener('change', function(){ curProj=proj.value; localStorage.setItem('pureloft_proj', curProj); window.scrollTo(0,0); render(); });
+
 function cellActive(col, unit){ return !(col.bath && col.bath > unit.b); }
 
 // ---- load ----
@@ -241,7 +254,9 @@ function setupRealtime(){
 function render(){
   var sup=isSuper();
   var html='';
-  CHECKLISTS.forEach(function(cl){
+  var list = curProj==='all' ? CHECKLISTS : CHECKLISTS.filter(function(c){ return c.id===curProj; });
+  if(!list.length) list=[CHECKLISTS[0]];
+  list.forEach(function(cl){
     var ownerCls = cl.owner==='The Pureloft' ? 'owner super' : 'owner';
     var total=0, done=0;
     cl.units.forEach(function(unit){ cl.cols.forEach(function(col){ if(cellActive(col,unit)){ total++; if(TICKS[k(cl.id,unit.u,col.label)]) done++; } }); });
@@ -358,8 +373,10 @@ var lbTarget=null;
 function openLightbox(cid,u,col){
   var t=TICKS[k(cid,u,col)]; if(!t) return;
   lbTarget={cid:cid,u:u,col:col,row:t};
-  lbImg.src=t.photo_url;
-  lbCap.textContent=col+' · unit '+u+'  —  '+t.done_by+' · '+fmtDate(t.done_at);
+  var isPhoto = t.photo_url && /^https?:/.test(t.photo_url);
+  lbImg.style.display = isPhoto ? 'block' : 'none';
+  if(isPhoto) lbImg.src=t.photo_url;
+  lbCap.textContent=(isPhoto?'':'No photo · verified on paper · ')+col+' · unit '+u+'  —  '+t.done_by+' · '+fmtDate(t.done_at);
   lb.classList.add('show');
 }
 document.getElementById('lbClose').addEventListener('click', function(){ lb.classList.remove('show'); lbTarget=null; });
