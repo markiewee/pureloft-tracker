@@ -70,6 +70,21 @@
   .lb button { padding:11px 22px; border-radius:10px; border:none; font-size:14px; font-weight:700; }
   .lb .close { background:#2b466e; color:#fff; }
   .lb .undo { background:#9a3a3a; color:#fff; }
+  /* inspect states (epoxy): ? -> ok / open */
+  td.cell.qcell { background:#fff7e6; cursor:pointer; }
+  td.cell.qcell .qm { color:#d9920a; font-size:18px; font-weight:800; line-height:1; }
+  td.cell.opencell { background:#dc2626; cursor:pointer; }
+  td.cell.opencell .om { color:#fff; font-size:10px; font-weight:800; letter-spacing:.5px; line-height:1; }
+  td.cell.opencell .meta { color:#ffd9d9; font-size:8px; margin-top:2px; line-height:1; }
+  .choice { position:fixed; inset:0; background:rgba(10,16,30,.6); z-index:210; display:none; align-items:flex-end; justify-content:center; }
+  .choice.show { display:flex; }
+  .cbox { background:#fff; width:100%; max-width:420px; border-radius:16px 16px 0 0; padding:16px 16px 24px; }
+  .cbox .ctitle { font-size:13px; color:#8a93a6; text-align:center; margin-bottom:6px; font-weight:600; }
+  .cbox button { display:block; width:100%; padding:14px; border-radius:10px; border:none; font-size:15px; font-weight:700; margin-top:9px; }
+  .cbox .cok { background:#16a34a; color:#fff; }
+  .cbox .copen { background:#dc2626; color:#fff; }
+  .cbox .cclear { background:#eef1f6; color:#3a4458; }
+  .cbox .ccancel { background:#fff; color:#9aa3b2; }
   /* pin gate */
   .gate { position:fixed; inset:0; background:#1a2a4a; z-index:300; display:flex; align-items:center; justify-content:center; padding:24px; }
   .gate.hide { display:none; }
@@ -121,6 +136,17 @@
 <div class="toast" id="toast"></div>
 <input type="file" accept="image/*" capture="environment" id="cam" style="display:none">
 
+<!-- inspection choice sheet -->
+<div class="choice" id="choice">
+  <div class="cbox">
+    <div class="ctitle" id="ctitle">Inspection</div>
+    <button class="cok" data-o="ok">✓ Sealed OK</button>
+    <button class="copen" data-o="open">⚠ Needs epoxy (open)</button>
+    <button class="cclear" data-o="clear">Reset to ?</button>
+    <button class="ccancel" data-o="cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- lightbox -->
 <div class="lb" id="lb">
   <img id="lbImg" alt="step photo">
@@ -158,7 +184,7 @@ function bathCols(extra){
 }
 var CHECKLISTS = [
   {id:'hair',   title:'Hairdryer Installation',          sub:'Tick each bathroom once the hairdryer is fitted · hairdryers in stock', owner:'The Pureloft', bonus:false, units:BUNITS, cols:hairCols(), grouped:true},
-  {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Apply epoxy in each bathroom (one per toilet)', owner:'Leman',  bonus:true,  units:BUNITS, cols:hairCols(), grouped:true},
+  {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Step 1: inspect each bathroom (?), then epoxy where needed', owner:'Leman',  bonus:true,  units:BUNITS, cols:hairCols(), grouped:true, inspect:true},
   {id:'pest',   title:'Pest Control',                    sub:'Treat each unit for pests',              owner:'Hamid',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'lbags',  title:'Laundry Bags in Each Room',       sub:'Place a laundry bag in every room',      owner:'Akil',   bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'trash',  title:'Trash Bag Dispenser in Each Room',sub:'Install a dispenser in every room',      owner:'Lovelu', bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
@@ -275,8 +301,11 @@ function render(){
       cl.cols.forEach(function(col){
         if(!cellActive(col,unit)){ row+='<td class="cell na"><span class="na-dash">–</span></td>'; return; }
         var t=TICKS[k(cl.id,unit.u,col.label)];
-        if(t){ row+='<td class="cell done" data-cid="'+cl.id+'" data-u="'+unit.u+'" data-col="'+col.label+'"><div class="mark"><span class="tick">✓</span><span class="meta">'+t.done_by+' · '+fmtDate(t.done_at)+'</span></div></td>'; }
-        else { row+='<td class="cell" data-cid="'+cl.id+'" data-u="'+unit.u+'" data-col="'+col.label+'"></td>'; }
+        var base='data-cid="'+cl.id+'" data-u="'+unit.u+'" data-col="'+col.label+'"';
+        if(t && t.outcome==='open'){ row+='<td class="cell opencell" '+base+'><div class="mark"><span class="om">OPEN</span><span class="meta">'+t.done_by+'</span></div></td>'; }
+        else if(t){ row+='<td class="cell done" '+base+'><div class="mark"><span class="tick">✓</span><span class="meta">'+t.done_by+' · '+fmtDate(t.done_at)+'</span></div></td>'; }
+        else if(cl.inspect){ row+='<td class="cell qcell" '+base+'><div class="mark"><span class="qm">?</span></div></td>'; }
+        else { row+='<td class="cell" '+base+'></td>'; }
       });
       row+='</tr>'; body+=row;
     });
@@ -293,6 +322,8 @@ wrap.addEventListener('click', function(e){
   var td=e.target.closest('td.cell'); if(!td || td.classList.contains('na')) return;
   if(!NAME){ toast('Select your name at the top first'); who.focus(); return; }
   if(td.classList.contains('uploading')) return;
+  var cl=CHECKLISTS.find(function(c){ return c.id===td.dataset.cid; });
+  if(cl && cl.inspect){ openChoice(td.dataset.cid, td.dataset.u, td.dataset.col); return; }
   if(td.classList.contains('done')){ openLightbox(td.dataset.cid, td.dataset.u, td.dataset.col); return; }
   // empty cell -> take photo
   pending={ cid:td.dataset.cid, u:td.dataset.u, col:td.dataset.col, td:td };
@@ -387,6 +418,30 @@ lbUndo.addEventListener('click', async function(){
   lbUndo.disabled=false; lbUndo.textContent='Undo this step';
   lb.classList.remove('show'); lbTarget=null;
 });
+
+// ---- inspection choice (epoxy: ? -> ok / open) ----
+var choiceEl=document.getElementById('choice'), choiceTarget=null;
+function openChoice(cid,u,col){ choiceTarget={cid:cid,u:u,col:col}; document.getElementById('ctitle').textContent=col+' · unit '+u; choiceEl.classList.add('show'); }
+choiceEl.addEventListener('click', async function(e){
+  var o=e.target.dataset && e.target.dataset.o;
+  if(!o){ if(e.target===choiceEl){ choiceEl.classList.remove('show'); choiceTarget=null; } return; }
+  var t=choiceTarget; choiceEl.classList.remove('show'); choiceTarget=null;
+  if(!t || o==='cancel') return;
+  if(o==='clear'){ return clearTick(t.cid,t.u,t.col); }
+  return setOutcome(t.cid,t.u,t.col,o);
+});
+async function setOutcome(cid,u,col,outcome){
+  var key=k(cid,u,col);
+  var row={checklist_id:cid,unit:u,col_label:col,done_by:shortName(),photo_url:'inspect',photo_path:'',outcome:outcome};
+  TICKS[key]=Object.assign({done_at:new Date().toISOString()},row); render();
+  try{ var r=await sb.from('tracker_ticks').upsert(row,{onConflict:'checklist_id,unit,col_label'}).select().single(); if(r.error) throw r.error; TICKS[key]=r.data; render(); }
+  catch(e){ console.error(e); toast('Save failed'); loadAll(); }
+}
+async function clearTick(cid,u,col){
+  var key=k(cid,u,col); delete TICKS[key]; render();
+  try{ var r=await sb.from('tracker_ticks').delete().eq('checklist_id',cid).eq('unit',u).eq('col_label',col); if(r.error) throw r.error; }
+  catch(e){ console.error(e); toast('Clear failed'); loadAll(); }
+}
 
 // ---- progress report ----
 document.getElementById('reportBtn').addEventListener('click', function(){
