@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Pureloft · Projects &amp; Checklists Tracker</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { overflow-x:hidden; }
+  body { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; color:#1a1a1a; background:#eef1f6; padding-bottom:60px; }
+  .topbar { position:sticky; top:0; z-index:50; background:#1a2a4a; color:#fff; padding:14px 16px; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+  .topbar h1 { font-size:17px; font-weight:700; letter-spacing:-.2px; }
+  .topbar .kick { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#9fb0cc; margin-bottom:3px; }
+  .me { display:flex; align-items:center; gap:8px; margin-top:11px; }
+  .me label { font-size:12px; color:#cdd6e6; white-space:nowrap; }
+  .me select { flex:1; padding:9px 10px; border-radius:8px; border:none; font-size:15px; font-weight:600; background:#fff; color:#1a2a4a; }
+  .conn { font-size:11px; padding:3px 9px; border-radius:20px; background:#2b5c9e; color:#fff; white-space:nowrap; }
+  .conn.off { background:#9a3a3a; }
+  .bar { display:flex; gap:8px; margin-top:10px; }
+  .bar button { flex:1; padding:8px; border-radius:8px; border:1px solid #3a548a; background:#22365a; color:#dbe4f3; font-size:12px; font-weight:600; }
+  .bar button:active { background:#2b466e; }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:11px; padding-top:10px; border-top:1px solid #2c456e; }
+  .legend .lg { display:flex; align-items:center; gap:6px; font-size:11px; color:#cdd6e6; }
+  .legend .dot { width:11px; height:11px; border-radius:3px; }
+  .superhint { font-size:11px; color:#ffd27a; margin-top:7px; }
+  .wrap { max-width:1100px; margin:0 auto; padding:14px; }
+  .loading { text-align:center; color:#8a93a6; padding:40px 0; font-size:13px; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(20,40,80,.08); margin-bottom:16px; overflow:hidden; }
+  .card .hd { padding:14px 16px 12px; border-bottom:1px solid #eef1f6; }
+  .card .hd .row1 { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .card h2 { font-size:15.5px; font-weight:800; color:#1a2a4a; }
+  .card .sub { font-size:12px; color:#8a93a6; margin-top:3px; line-height:1.5; }
+  .owner { font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; background:#eaf0fb; color:#2b5c9e; white-space:nowrap; }
+  .owner.super { background:#f1f1f4; color:#6b7280; }
+  .bonus { display:inline-block; margin-top:8px; font-size:11px; font-weight:700; color:#9a6a00; background:#fff4d6; padding:4px 10px; border-radius:6px; }
+  .prog { display:flex; align-items:center; gap:8px; margin-top:11px; }
+  .prog .track { flex:1; height:7px; background:#eef1f6; border-radius:4px; overflow:hidden; }
+  .prog .fill { height:100%; background:#2b5c9e; width:0; transition:width .2s; }
+  .prog .pct { font-size:12px; font-weight:700; color:#2b5c9e; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table { border-collapse:collapse; width:auto; font-size:13px; }
+  th, td { border:1px solid #e8ecf3; text-align:center; padding:0; }
+  th { background:#f7f9fc; color:#6b7689; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:8px 6px; white-space:nowrap; }
+  td.unit, th.unit { position:sticky; left:0; z-index:2; background:#fff; text-align:left; padding:10px 12px; font-weight:700; color:#1a2a4a; white-space:nowrap; box-shadow:1px 0 0 #e8ecf3; }
+  th.unit { background:#f7f9fc; }
+  td.unit { position:relative; }
+  td.unit.super { cursor:pointer; }
+  td.unit .ustat { display:inline-block; margin-left:7px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:#fff; padding:2px 6px; border-radius:10px; vertical-align:middle; }
+  td.unit .cyc { color:#c3ccd9; font-size:11px; margin-left:5px; }
+  td.cell { width:54px; height:46px; cursor:pointer; }
+  td.cell.na { background:#f7f8fa; cursor:default; }
+  td.cell .mark { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; }
+  td.cell.done { background:#1a2a4a; }
+  td.cell.done .tick { color:#fff; font-size:17px; font-weight:700; line-height:1; }
+  td.cell.done .meta { color:#9fb0cc; font-size:8px; margin-top:2px; line-height:1; }
+  td.cell.uploading { background:#dbe4f3; }
+  td.cell.uploading .mark { font-size:9px; color:#2b5c9e; font-weight:700; }
+  td.cell .na-dash { color:#cbd2dd; }
+  .secgroup { font-size:10px; letter-spacing:.5px; text-transform:uppercase; color:#9aa3b2; padding:9px 12px 4px; background:#fbfcfe; }
+  .foot { text-align:center; font-size:11px; color:#aab; padding:6px 0 2px; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#1a2a4a; color:#fff; padding:10px 18px; border-radius:24px; font-size:13px; font-weight:600; opacity:0; transition:opacity .25s; pointer-events:none; z-index:99; max-width:90%; text-align:center; }
+  .toast.show { opacity:1; }
+  /* lightbox */
+  .lb { position:fixed; inset:0; background:rgba(10,16,30,.92); z-index:200; display:none; flex-direction:column; align-items:center; justify-content:center; padding:18px; }
+  .lb.show { display:flex; }
+  .lb img { max-width:100%; max-height:68vh; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.5); }
+  .lb .cap { color:#cdd6e6; font-size:13px; margin-top:14px; text-align:center; }
+  .lb .acts { display:flex; gap:12px; margin-top:18px; }
+  .lb button { padding:11px 22px; border-radius:10px; border:none; font-size:14px; font-weight:700; }
+  .lb .close { background:#2b466e; color:#fff; }
+  .lb .undo { background:#9a3a3a; color:#fff; }
+  /* pin gate */
+  .gate { position:fixed; inset:0; background:#1a2a4a; z-index:300; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .gate.hide { display:none; }
+  .gatebox { width:100%; max-width:320px; text-align:center; }
+  .gkick { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9fb0cc; }
+  .gtitle { font-size:22px; font-weight:800; color:#fff; margin-top:6px; }
+  .gsub { font-size:13px; color:#b9c4d8; margin-top:14px; }
+  .gate input { width:100%; margin-top:14px; padding:14px; border-radius:10px; border:none; font-size:18px; text-align:center; letter-spacing:3px; font-weight:700; color:#1a2a4a; }
+  .gate button { width:100%; margin-top:12px; padding:13px; border-radius:10px; border:none; background:#2b5c9e; color:#fff; font-size:15px; font-weight:700; }
+  .gate button:active { background:#234c84; }
+  .gerr { color:#ff9a9a; font-size:13px; min-height:18px; margin-top:12px; font-weight:600; }
+</style>
+</head>
+<body>
+<!-- PIN gate -->
+<div class="gate" id="gate">
+  <div class="gatebox">
+    <div class="gkick">The Pureloft</div>
+    <div class="gtitle">Projects &amp; Checklists</div>
+    <div class="gsub">Enter the team PIN to continue</div>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="20">
+    <button id="pinBtn">Enter</button>
+    <div class="gerr" id="gerr"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="kick">The Pureloft · Suasana Suites</div>
+  <h1>Projects &amp; Checklists Tracker</h1>
+  <div class="me">
+    <label>I am:</label>
+    <select id="who">
+      <option value="">— select your name —</option>
+      <option>Leman</option>
+      <option>Jipse</option>
+      <option>Hamid</option>
+      <option>Lovelu</option>
+      <option>Akil</option>
+      <option>The Pureloft (supervisor)</option>
+    </select>
+    <span class="conn off" id="conn">offline</span>
+  </div>
+  <div class="bar">
+    <button id="reportBtn">📋 Copy progress report</button>
+  </div>
+  <div class="legend">
+    <span class="lg"><span class="dot" style="background:#16a34a"></span>Available · do today</span>
+    <span class="lg"><span class="dot" style="background:#f59e0b"></span>Priority</span>
+    <span class="lg"><span class="dot" style="background:#dc2626"></span>Blocked · no access</span>
+    <span class="lg"><span class="dot" style="background:#9ca3af"></span>Skip</span>
+  </div>
+  <div class="superhint" id="superhint" style="display:none">Supervisor: tap a unit name to set its status. Tap again to cycle.</div>
+</div>
+
+<div class="wrap" id="wrap"><div class="loading">Loading…</div></div>
+<div class="foot" id="foot"></div>
+<div class="toast" id="toast"></div>
+<input type="file" accept="image/*" capture="environment" id="cam" style="display:none">
+
+<!-- lightbox -->
+<div class="lb" id="lb">
+  <img id="lbImg" alt="step photo">
+  <div class="cap" id="lbCap"></div>
+  <div class="acts">
+    <button class="close" id="lbClose">Close</button>
+    <button class="undo" id="lbUndo">Undo this step</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---- Supabase ----
+var SB_URL='https://ygegphnergewaleeyuwu.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnZWdwaG5lcmdld2FsZWV5dXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NjU0NzcsImV4cCI6MjA5ODI0MTQ3N30.rFMAIR3MUUDuXVbeI-3hdTPhCse9S0AKRiwjJi6vovw';
+var BUCKET='tracker-photos';
+// Team PIN — change this one value to rotate access. Workers enter it once per device.
+var PIN='pureloft26';
+var sb=window.supabase.createClient(SB_URL, SB_KEY);
+
+// ---- unit lists (from the real Suasana trackers) ----
+var PERUNIT = ['3a-06','08-06','09-03','11-3a','13-07','13-12','13a-06','18-03','19-01','19-06','23a-07','26-07','27-01','27-03','28-01','28-06','28-07','29-11','30-01','13-06']
+  .map(function(u){ return {u:u, b:9, grp:''}; });
+var BATH = [
+  {u:'29-11', b:1, grp:'1-BR · 1-BATH'},
+  {u:'09-03', b:2, grp:'3-BR · 2-BATH'},{u:'11-3a', b:2, grp:'3-BR · 2-BATH'},{u:'18-03', b:2, grp:'3-BR · 2-BATH'},{u:'25-10', b:2, grp:'3-BR · 2-BATH'},{u:'27-03', b:2, grp:'3-BR · 2-BATH'},
+  {u:'13-07', b:3, grp:'3-BR · 3-BATH'},{u:'13-12', b:3, grp:'3-BR · 3-BATH'},{u:'23a-07', b:3, grp:'3-BR · 3-BATH'},{u:'26-07', b:3, grp:'3-BR · 3-BATH'},{u:'28-07', b:3, grp:'3-BR · 3-BATH'},
+  {u:'3a-06', b:3, grp:'4-BR · 3-BATH'},{u:'08-06', b:3, grp:'4-BR · 3-BATH'},{u:'13-06', b:3, grp:'4-BR · 3-BATH'},{u:'13a-06', b:3, grp:'4-BR · 3-BATH'},{u:'19-01', b:3, grp:'4-BR · 3-BATH'}
+];
+function plainCols(labels){ return labels.map(function(l){ return {label:l, bath:null}; }); }
+function bathCols(extra){
+  var c=[]; for(var b=1;b<=3;b++){ c.push({label:'B'+b+' Shower',bath:b}); c.push({label:'B'+b+' Commode',bath:b}); }
+  (extra||[]).forEach(function(l){ c.push({label:l, bath:null}); });
+  return c;
+}
+var CHECKLISTS = [
+  {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Apply epoxy in all bathrooms',           owner:'Leman',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'pest',   title:'Pest Control',                    sub:'Treat each unit for pests',              owner:'Hamid',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'lbags',  title:'Laundry Bags in Each Room',       sub:'Place a laundry bag in every room',      owner:'Akil',   bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'trash',  title:'Trash Bag Dispenser in Each Room',sub:'Install a dispenser in every room',      owner:'Lovelu', bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'wmlock', title:'Lock Washing Machines',           sub:'Fit a lock on each washing machine',     owner:'Jipse',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'cards',  title:'Access Card Checklist',           sub:'Confirm access cards present per unit',   owner:'The Pureloft', bonus:false, units:PERUNIT, cols:plainCols(['Card 1','Card 2','Card 3','Card 4'])},
+  {id:'trap',   title:'Toilet Trap Installation',        sub:'2 traps per bathroom · shower + commode', owner:'The Pureloft', bonus:false, units:BATH, cols:bathCols(), grouped:true},
+  {id:'odour',  title:'Odour & Leak Inspection',         sub:'Traps + clear any sewer smell',          owner:'The Pureloft', bonus:false, units:BATH, cols:bathCols(['Washing Machine','Under Sink']), grouped:true}
+];
+
+// ---- highlight config ----
+var STORDER=['available','priority','blocked','skip'];
+var STCOLOR={available:'#16a34a',priority:'#f59e0b',blocked:'#dc2626',skip:'#9ca3af'};
+var STLABEL={available:'Avail',priority:'Priority',blocked:'Blocked',skip:'Skip'};
+
+// ---- state ----
+var NAME = localStorage.getItem('pureloft_name') || '';
+var TICKS = {};   // "cid|unit|col" -> {id, by, at, photo_url, photo_path}
+var STATUS = {};  // unit -> status
+var pending = null; // {cid, unit, col, key, td}
+
+function k(cid,u,col){ return cid+'|'+u+'|'+col; }
+function isSuper(){ return NAME==='The Pureloft (supervisor)'; }
+function shortName(){ return NAME.replace(' (supervisor)',''); }
+function safe(s){ return String(s).replace(/[^a-zA-Z0-9._-]+/g,'_'); }
+function fmtDate(iso){ var d=new Date(iso); return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2); }
+
+var who=document.getElementById('who'), wrap=document.getElementById('wrap'),
+    conn=document.getElementById('conn'), cam=document.getElementById('cam'),
+    superhint=document.getElementById('superhint');
+who.value=NAME;
+who.addEventListener('change', function(){
+  NAME=who.value; localStorage.setItem('pureloft_name', NAME);
+  superhint.style.display = isSuper() ? 'block' : 'none';
+  render();
+});
+superhint.style.display = isSuper() ? 'block' : 'none';
+
+function cellActive(col, unit){ return !(col.bath && col.bath > unit.b); }
+
+// ---- load ----
+async function loadAll(){
+  try {
+    var t = await sb.from('tracker_ticks').select('*');
+    var s = await sb.from('unit_status').select('*');
+    if(t.error) throw t.error; if(s.error) throw s.error;
+    TICKS={}; (t.data||[]).forEach(function(r){ TICKS[k(r.checklist_id,r.unit,r.col_label)]=r; });
+    STATUS={}; (s.data||[]).forEach(function(r){ STATUS[r.unit]=r.status; });
+    render();
+  } catch(e){ toast('Load failed — check connection'); console.error(e); }
+}
+
+// ---- realtime ----
+function applyTick(p){
+  if(p.eventType==='DELETE'){
+    var id=p.old && p.old.id; if(!id) return;
+    for(var key in TICKS){ if(TICKS[key].id===id){ delete TICKS[key]; break; } }
+  } else {
+    var r=p.new; TICKS[k(r.checklist_id,r.unit,r.col_label)]=r;
+  }
+  render();
+}
+function applyStatus(p){
+  if(p.eventType==='DELETE'){ var u=p.old&&p.old.unit; if(u) delete STATUS[u]; }
+  else { STATUS[p.new.unit]=p.new.status; }
+  render();
+}
+function setupRealtime(){
+  sb.channel('tracker')
+    .on('postgres_changes',{event:'*',schema:'public',table:'tracker_ticks'}, applyTick)
+    .on('postgres_changes',{event:'*',schema:'public',table:'unit_status'}, applyStatus)
+    .subscribe(function(status){
+      var ok = status==='SUBSCRIBED';
+      conn.textContent = ok?'live':'offline'; conn.className='conn'+(ok?'':' off');
+    });
+}
+
+// ---- render ----
+function render(){
+  var sup=isSuper();
+  var html='';
+  CHECKLISTS.forEach(function(cl){
+    var ownerCls = cl.owner==='The Pureloft' ? 'owner super' : 'owner';
+    var total=0, done=0;
+    cl.units.forEach(function(unit){ cl.cols.forEach(function(col){ if(cellActive(col,unit)){ total++; if(TICKS[k(cl.id,unit.u,col.label)]) done++; } }); });
+    var pct = total? Math.round(done/total*100):0;
+    var hd='<div class="hd">'+
+        '<div class="row1"><div><h2>'+cl.title+'</h2><div class="sub">'+cl.sub+'</div></div>'+
+        '<span class="'+ownerCls+'">'+(cl.owner==='The Pureloft'?'Checks: ':'In charge: ')+cl.owner+'</span></div>'+
+        (cl.bonus?'<span class="bonus">RM100 bonus · done well + finished this week</span>':'')+
+        '<div class="prog"><div class="track"><div class="fill" style="width:'+pct+'%"></div></div><div class="pct">'+done+'/'+total+'</div></div>'+
+      '</div>';
+    var thead='<tr><th class="unit">Unit</th>';
+    cl.cols.forEach(function(col){ thead+='<th>'+col.label+'</th>'; });
+    thead+='</tr>';
+    var body='', lastGrp=null;
+    cl.units.forEach(function(unit){
+      if(cl.grouped && unit.grp!==lastGrp){ lastGrp=unit.grp; body+='<tr><td class="secgroup" colspan="'+(cl.cols.length+1)+'">'+unit.grp+'</td></tr>'; }
+      var st=STATUS[unit.u];
+      var ucls='unit'+(sup?' super':'');
+      var ustyle = st? 'border-left:4px solid '+STCOLOR[st]+';' : '';
+      var chip = st? '<span class="ustat" style="background:'+STCOLOR[st]+'">'+STLABEL[st]+'</span>' : '';
+      var cyc = sup? '<span class="cyc">▸</span>' : '';
+      var row='<tr><td class="'+ucls+'" data-unit="'+unit.u+'" style="'+ustyle+'">'+unit.u+chip+cyc+'</td>';
+      cl.cols.forEach(function(col){
+        if(!cellActive(col,unit)){ row+='<td class="cell na"><span class="na-dash">–</span></td>'; return; }
+        var t=TICKS[k(cl.id,unit.u,col.label)];
+        if(t){ row+='<td class="cell done" data-cid="'+cl.id+'" data-u="'+unit.u+'" data-col="'+col.label+'"><div class="mark"><span class="tick">✓</span><span class="meta">'+t.done_by+' · '+fmtDate(t.done_at)+'</span></div></td>'; }
+        else { row+='<td class="cell" data-cid="'+cl.id+'" data-u="'+unit.u+'" data-col="'+col.label+'"></td>'; }
+      });
+      row+='</tr>'; body+=row;
+    });
+    html += '<div class="card">'+hd+'<div class="scroll"><table><thead>'+thead+'</thead><tbody>'+body+'</tbody></table></div></div>';
+  });
+  wrap.innerHTML = html;
+}
+
+// ---- photo capture + tick ----
+wrap.addEventListener('click', function(e){
+  // supervisor: cycle unit status
+  var u=e.target.closest('td.unit.super');
+  if(u){ cycleStatus(u.dataset.unit); return; }
+  var td=e.target.closest('td.cell'); if(!td || td.classList.contains('na')) return;
+  if(!NAME){ toast('Select your name at the top first'); who.focus(); return; }
+  if(td.classList.contains('uploading')) return;
+  if(td.classList.contains('done')){ openLightbox(td.dataset.cid, td.dataset.u, td.dataset.col); return; }
+  // empty cell -> take photo
+  pending={ cid:td.dataset.cid, u:td.dataset.u, col:td.dataset.col, td:td };
+  cam.value=''; cam.click();
+});
+
+cam.addEventListener('change', async function(){
+  var file=cam.files && cam.files[0];
+  if(!file || !pending){ pending=null; return; }
+  var p=pending; pending=null;
+  p.td.classList.add('uploading'); p.td.innerHTML='<div class="mark">uploading…</div>';
+  try {
+    var blob=await compress(file);
+    var path=p.cid+'/'+p.u+'/'+safe(p.col)+'-'+Date.now()+'.jpg';
+    var up=await sb.storage.from(BUCKET).upload(path, blob, {contentType:'image/jpeg', upsert:false});
+    if(up.error) throw up.error;
+    var pub=sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    var ins=await sb.from('tracker_ticks').insert({
+      checklist_id:p.cid, unit:p.u, col_label:p.col,
+      done_by:shortName(), photo_url:pub, photo_path:path
+    }).select().single();
+    if(ins.error){
+      // someone else ticked it first — clean up our orphan upload
+      await sb.storage.from(BUCKET).remove([path]);
+      throw ins.error;
+    }
+    TICKS[k(p.cid,p.u,p.col)]=ins.data;
+    render();
+    toast('Verified ✓');
+  } catch(err){
+    console.error(err);
+    toast('Upload failed — try again');
+    render();
+  }
+});
+
+function compress(file){
+  return new Promise(function(res,rej){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      URL.revokeObjectURL(url);
+      var max=1280, w=img.width, h=img.height;
+      if(w>h && w>max){ h=Math.round(h*max/w); w=max; }
+      else if(h>=w && h>max){ w=Math.round(w*max/h); h=max; }
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(function(b){ b?res(b):rej(new Error('compress failed')); },'image/jpeg',0.7);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('image load failed')); };
+    img.src=url;
+  });
+}
+
+// ---- supervisor status cycle ----
+async function cycleStatus(unit){
+  var cur=STATUS[unit], idx=cur?STORDER.indexOf(cur):-1;
+  var next = idx<0 ? 'available' : (idx>=STORDER.length-1 ? null : STORDER[idx+1]);
+  // optimistic
+  if(next===null) delete STATUS[unit]; else STATUS[unit]=next;
+  render();
+  try {
+    if(next===null){ var d=await sb.from('unit_status').delete().eq('unit',unit); if(d.error) throw d.error; }
+    else { var up=await sb.from('unit_status').upsert({unit:unit,status:next,set_by:shortName(),set_at:new Date().toISOString()}); if(up.error) throw up.error; }
+  } catch(e){ console.error(e); toast('Status save failed'); loadAll(); }
+}
+
+// ---- lightbox / undo ----
+var lb=document.getElementById('lb'), lbImg=document.getElementById('lbImg'),
+    lbCap=document.getElementById('lbCap'), lbUndo=document.getElementById('lbUndo');
+var lbTarget=null;
+function openLightbox(cid,u,col){
+  var t=TICKS[k(cid,u,col)]; if(!t) return;
+  lbTarget={cid:cid,u:u,col:col,row:t};
+  lbImg.src=t.photo_url;
+  lbCap.textContent=col+' · unit '+u+'  —  '+t.done_by+' · '+fmtDate(t.done_at);
+  lb.classList.add('show');
+}
+document.getElementById('lbClose').addEventListener('click', function(){ lb.classList.remove('show'); lbTarget=null; });
+lbUndo.addEventListener('click', async function(){
+  if(!lbTarget) return;
+  var t=lbTarget.row;
+  lbUndo.disabled=true; lbUndo.textContent='Removing…';
+  try {
+    var del=await sb.from('tracker_ticks').delete().eq('id', t.id); if(del.error) throw del.error;
+    if(t.photo_path) await sb.storage.from(BUCKET).remove([t.photo_path]);
+    delete TICKS[k(lbTarget.cid,lbTarget.u,lbTarget.col)];
+    render(); toast('Step undone');
+  } catch(e){ console.error(e); toast('Undo failed'); }
+  lbUndo.disabled=false; lbUndo.textContent='Undo this step';
+  lb.classList.remove('show'); lbTarget=null;
+});
+
+// ---- progress report ----
+document.getElementById('reportBtn').addEventListener('click', function(){
+  var lines=['PURELOFT TRACKER — '+fmtDate(new Date().toISOString())];
+  CHECKLISTS.forEach(function(cl){
+    var total=0, done=0, pendingU=[];
+    cl.units.forEach(function(unit){
+      var any=false, allDone=true;
+      cl.cols.forEach(function(col){ if(cellActive(col,unit)){ total++; any=true; if(TICKS[k(cl.id,unit.u,col.label)]) done++; else allDone=false; } });
+      if(any && !allDone) pendingU.push(unit.u);
+    });
+    lines.push('');
+    lines.push(cl.title+' ('+(cl.owner==='The Pureloft'?'checks: ':'')+cl.owner+'): '+done+'/'+total+' done');
+    if(pendingU.length) lines.push('  pending: '+pendingU.join(', '));
+  });
+  var hi=Object.keys(STATUS);
+  if(hi.length){ lines.push(''); lines.push('HIGHLIGHTS:'); hi.forEach(function(u){ lines.push('  '+u+' — '+STLABEL[STATUS[u]]); }); }
+  var txt=lines.join('\n');
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ toast('Report copied'); }, function(){ fallback(txt); }); }
+  else fallback(txt);
+});
+function fallback(txt){ prompt('Copy the report:', txt); }
+
+var toastEl=document.getElementById('toast'), toastT;
+function toast(m){ toastEl.textContent=m; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove('show'); },1900); }
+
+document.getElementById('foot').textContent='Live · The Pureloft · photos verified to Supabase';
+
+// ---- PIN gate + init ----
+var inited=false;
+function init(){ if(inited) return; inited=true; setupRealtime(); loadAll(); }
+var gate=document.getElementById('gate'), pinIn=document.getElementById('pin'),
+    pinBtn=document.getElementById('pinBtn'), gerr=document.getElementById('gerr');
+function unlock(){
+  if(pinIn.value===PIN){
+    localStorage.setItem('pureloft_pin_ok', PIN);
+    gate.classList.add('hide'); init();
+  } else { gerr.textContent='Wrong PIN — try again'; pinIn.value=''; pinIn.focus(); }
+}
+pinBtn.addEventListener('click', unlock);
+pinIn.addEventListener('keydown', function(e){ if(e.key==='Enter') unlock(); });
+if(localStorage.getItem('pureloft_pin_ok')===PIN){ gate.classList.add('hide'); init(); }
+else { pinIn.focus(); }
+</script>
+</body>
+</html>
