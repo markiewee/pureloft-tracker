@@ -84,18 +84,6 @@
 </style>
 </head>
 <body>
-<!-- PIN gate -->
-<div class="gate" id="gate">
-  <div class="gatebox">
-    <div class="gkick">The Pureloft</div>
-    <div class="gtitle">Projects &amp; Checklists</div>
-    <div class="gsub">Enter the team PIN to continue</div>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" maxlength="20">
-    <button id="pinBtn">Enter</button>
-    <div class="gerr" id="gerr"></div>
-  </div>
-</div>
-
 <div class="topbar">
   <div class="kick">The Pureloft · Suasana Suites</div>
   <h1>Projects &amp; Checklists Tracker</h1>
@@ -145,8 +133,6 @@
 var SB_URL='https://ygegphnergewaleeyuwu.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnZWdwaG5lcmdld2FsZWV5dXd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2NjU0NzcsImV4cCI6MjA5ODI0MTQ3N30.rFMAIR3MUUDuXVbeI-3hdTPhCse9S0AKRiwjJi6vovw';
 var BUCKET='tracker-photos';
-// Team PIN — change this one value to rotate access. Workers enter it once per device.
-var PIN='pureloft26';
 var sb=window.supabase.createClient(SB_URL, SB_KEY);
 
 // ---- unit lists (from the real Suasana trackers) ----
@@ -158,6 +144,14 @@ var BATH = [
   {u:'13-07', b:3, grp:'3-BR · 3-BATH'},{u:'13-12', b:3, grp:'3-BR · 3-BATH'},{u:'23a-07', b:3, grp:'3-BR · 3-BATH'},{u:'26-07', b:3, grp:'3-BR · 3-BATH'},{u:'28-07', b:3, grp:'3-BR · 3-BATH'},
   {u:'3a-06', b:3, grp:'4-BR · 3-BATH'},{u:'08-06', b:3, grp:'4-BR · 3-BATH'},{u:'13-06', b:3, grp:'4-BR · 3-BATH'},{u:'13a-06', b:3, grp:'4-BR · 3-BATH'},{u:'19-01', b:3, grp:'4-BR · 3-BATH'}
 ];
+// hairdryer install sheet (one tick per bathroom). Struck units (18-03,25-10,28-06) excluded.
+var HAIR = [
+  {u:'29-11', b:1, grp:'1-BR · 1-BATH'},
+  {u:'09-03', b:2, grp:'3-BR · 2-BATH'},{u:'11-3a', b:2, grp:'3-BR · 2-BATH'},{u:'27-03', b:2, grp:'3-BR · 2-BATH'},
+  {u:'13-07', b:3, grp:'3-BR · 3-BATH'},{u:'13-12', b:3, grp:'3-BR · 3-BATH'},{u:'23a-07', b:3, grp:'3-BR · 3-BATH'},{u:'26-07', b:3, grp:'3-BR · 3-BATH'},{u:'28-07', b:3, grp:'3-BR · 3-BATH'},
+  {u:'3a-06', b:3, grp:'4-BR · 3-BATH'},{u:'08-06', b:3, grp:'4-BR · 3-BATH'},{u:'13-06', b:3, grp:'4-BR · 3-BATH'},{u:'13a-06', b:3, grp:'4-BR · 3-BATH'},{u:'19-01', b:3, grp:'4-BR · 3-BATH'},{u:'19-06', b:3, grp:'4-BR · 3-BATH'},{u:'27-01', b:3, grp:'4-BR · 3-BATH'},{u:'28-01', b:3, grp:'4-BR · 3-BATH'},{u:'30-01', b:3, grp:'4-BR · 3-BATH'}
+];
+function hairCols(){ return [{label:'Bath 1',bath:1},{label:'Bath 2',bath:2},{label:'Bath 3',bath:3}]; }
 function plainCols(labels){ return labels.map(function(l){ return {label:l, bath:null}; }); }
 function bathCols(extra){
   var c=[]; for(var b=1;b<=3;b++){ c.push({label:'B'+b+' Shower',bath:b}); c.push({label:'B'+b+' Commode',bath:b}); }
@@ -165,6 +159,7 @@ function bathCols(extra){
   return c;
 }
 var CHECKLISTS = [
+  {id:'hair',   title:'Hairdryer Installation',          sub:'Tick each bathroom once the hairdryer is fitted · hairdryers in stock', owner:'The Pureloft', bonus:false, units:HAIR, cols:hairCols(), grouped:true},
   {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Apply epoxy in all bathrooms',           owner:'Leman',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'pest',   title:'Pest Control',                    sub:'Treat each unit for pests',              owner:'Hamid',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'lbags',  title:'Laundry Bags in Each Room',       sub:'Place a laundry bag in every room',      owner:'Akil',   bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
@@ -409,21 +404,9 @@ function toast(m){ toastEl.textContent=m; toastEl.classList.add('show'); clearTi
 
 document.getElementById('foot').textContent='Live · The Pureloft · photos verified to Supabase';
 
-// ---- PIN gate + init ----
-var inited=false;
-function init(){ if(inited) return; inited=true; setupRealtime(); loadAll(); }
-var gate=document.getElementById('gate'), pinIn=document.getElementById('pin'),
-    pinBtn=document.getElementById('pinBtn'), gerr=document.getElementById('gerr');
-function unlock(){
-  if(pinIn.value===PIN){
-    localStorage.setItem('pureloft_pin_ok', PIN);
-    gate.classList.add('hide'); init();
-  } else { gerr.textContent='Wrong PIN — try again'; pinIn.value=''; pinIn.focus(); }
-}
-pinBtn.addEventListener('click', unlock);
-pinIn.addEventListener('keydown', function(e){ if(e.key==='Enter') unlock(); });
-if(localStorage.getItem('pureloft_pin_ok')===PIN){ gate.classList.add('hide'); init(); }
-else { pinIn.focus(); }
+// ---- init ----
+setupRealtime();
+loadAll();
 </script>
 </body>
 </html>
