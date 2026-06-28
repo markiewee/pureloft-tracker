@@ -158,7 +158,7 @@ function bathCols(extra){
 }
 var CHECKLISTS = [
   {id:'hair',   title:'Hairdryer Installation',          sub:'Tick each bathroom once the hairdryer is fitted · hairdryers in stock', owner:'The Pureloft', bonus:false, units:BUNITS, cols:hairCols(), grouped:true},
-  {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Apply epoxy in all bathrooms',           owner:'Leman',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
+  {id:'epoxy',  title:'Epoxy in Bathrooms',              sub:'Apply epoxy in each bathroom (one per toilet)', owner:'Leman',  bonus:true,  units:BUNITS, cols:hairCols(), grouped:true},
   {id:'pest',   title:'Pest Control',                    sub:'Treat each unit for pests',              owner:'Hamid',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'lbags',  title:'Laundry Bags in Each Room',       sub:'Place a laundry bag in every room',      owner:'Akil',   bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'trash',  title:'Trash Bag Dispenser in Each Room',sub:'Install a dispenser in every room',      owner:'Lovelu', bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
