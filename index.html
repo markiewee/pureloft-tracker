@@ -142,12 +142,19 @@ var sb=window.supabase.createClient(SB_URL, SB_KEY);
 // ---- unit lists (from the real Suasana trackers) ----
 var PERUNIT = ['3a-06','08-06','09-03','11-3a','13-07','13-12','13a-06','18-03','19-01','19-06','23a-07','26-07','27-01','27-03','28-01','28-06','28-07','29-11','30-01','13-06']
   .map(function(u){ return {u:u, b:9, grp:''}; });
-// canonical bathroom-unit list (current Suasana reality; struck units 18-03,25-10,28-06 excluded)
+// hairdryer-sheet bathroom list (struck units 18-03,25-10,28-06 excluded per that sheet)
 var BUNITS = [
   {u:'29-11', b:1, grp:'1-BR · 1-BATH'},
   {u:'09-03', b:2, grp:'3-BR · 2-BATH'},{u:'11-3a', b:2, grp:'3-BR · 2-BATH'},{u:'27-03', b:2, grp:'3-BR · 2-BATH'},
   {u:'13-07', b:3, grp:'3-BR · 3-BATH'},{u:'13-12', b:3, grp:'3-BR · 3-BATH'},{u:'23a-07', b:3, grp:'3-BR · 3-BATH'},{u:'26-07', b:3, grp:'3-BR · 3-BATH'},{u:'28-07', b:3, grp:'3-BR · 3-BATH'},
   {u:'3a-06', b:3, grp:'4-BR · 3-BATH'},{u:'08-06', b:3, grp:'4-BR · 3-BATH'},{u:'13-06', b:3, grp:'4-BR · 3-BATH'},{u:'13a-06', b:3, grp:'4-BR · 3-BATH'},{u:'19-01', b:3, grp:'4-BR · 3-BATH'},{u:'19-06', b:3, grp:'4-BR · 3-BATH'},{u:'27-01', b:3, grp:'4-BR · 3-BATH'},{u:'28-01', b:3, grp:'4-BR · 3-BATH'},{u:'30-01', b:3, grp:'4-BR · 3-BATH'}
+];
+// FULL bathroom-unit roster (all units, nothing excluded) — used by trap + odour
+var BATHALL = [
+  {u:'29-11', b:1, grp:'1-BR · 1-BATH'},
+  {u:'09-03', b:2, grp:'3-BR · 2-BATH'},{u:'11-3a', b:2, grp:'3-BR · 2-BATH'},{u:'18-03', b:2, grp:'3-BR · 2-BATH'},{u:'25-10', b:2, grp:'3-BR · 2-BATH'},{u:'27-03', b:2, grp:'3-BR · 2-BATH'},
+  {u:'13-07', b:3, grp:'3-BR · 3-BATH'},{u:'13-12', b:3, grp:'3-BR · 3-BATH'},{u:'23a-07', b:3, grp:'3-BR · 3-BATH'},{u:'26-07', b:3, grp:'3-BR · 3-BATH'},{u:'28-07', b:3, grp:'3-BR · 3-BATH'},
+  {u:'3a-06', b:3, grp:'4-BR · 3-BATH'},{u:'08-06', b:3, grp:'4-BR · 3-BATH'},{u:'13-06', b:3, grp:'4-BR · 3-BATH'},{u:'13a-06', b:3, grp:'4-BR · 3-BATH'},{u:'19-01', b:3, grp:'4-BR · 3-BATH'},{u:'19-06', b:3, grp:'4-BR · 3-BATH'},{u:'27-01', b:3, grp:'4-BR · 3-BATH'},{u:'28-01', b:3, grp:'4-BR · 3-BATH'},{u:'28-06', b:3, grp:'4-BR · 3-BATH'},{u:'30-01', b:3, grp:'4-BR · 3-BATH'}
 ];
 function hairCols(){ return [{label:'Bath 1',bath:1},{label:'Bath 2',bath:2},{label:'Bath 3',bath:3}]; }
 function plainCols(labels){ return labels.map(function(l){ return {label:l, bath:null}; }); }
@@ -164,8 +171,8 @@ var CHECKLISTS = [
   {id:'trash',  title:'Trash Bag Dispenser in Each Room',sub:'Install a dispenser in every room',      owner:'Lovelu', bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'wmlock', title:'Lock Washing Machines',           sub:'Fit a lock on each washing machine',     owner:'Jipse',  bonus:true,  units:PERUNIT, cols:plainCols(['Done'])},
   {id:'cards',  title:'Access Card Checklist',           sub:'Confirm access cards present per unit',   owner:'The Pureloft', bonus:false, units:PERUNIT, cols:plainCols(['Card 1','Card 2','Card 3','Card 4'])},
-  {id:'trap',   title:'Toilet Trap Installation',        sub:'2 traps per bathroom · shower + commode', owner:'The Pureloft', bonus:false, units:BUNITS, cols:bathCols(), grouped:true},
-  {id:'odour',  title:'Odour & Leak Inspection',         sub:'Install traps (1 shower + 1 commode per bathroom) + WM disconnected/sealed + under-sink no leak/smell', owner:'The Pureloft', bonus:false, units:BUNITS, cols:bathCols(['Washing Machine','Under Sink']), grouped:true}
+  {id:'trap',   title:'Toilet Trap Installation',        sub:'2 traps per bathroom · shower + commode', owner:'The Pureloft', bonus:false, units:BATHALL, cols:bathCols(), grouped:true},
+  {id:'odour',  title:'Odour & Leak Inspection',         sub:'Install traps (1 shower + 1 commode per bathroom) + WM disconnected/sealed + under-sink no leak/smell', owner:'The Pureloft', bonus:false, units:BATHALL, cols:bathCols(['Washing Machine','Under Sink']), grouped:true}
 ];
 
 // ---- highlight config ----
@@ -368,9 +375,10 @@ function openLightbox(cid,u,col){
   var t=TICKS[k(cid,u,col)]; if(!t) return;
   lbTarget={cid:cid,u:u,col:col,row:t};
   var isPhoto = t.photo_url && /^https?:/.test(t.photo_url);
+  var note = isPhoto ? '' : (t.photo_url==='whatsapp' ? 'No photo here · proof in WhatsApp maintenance group · ' : 'No photo · verified on paper · ');
   lbImg.style.display = isPhoto ? 'block' : 'none';
   if(isPhoto) lbImg.src=t.photo_url;
-  lbCap.textContent=(isPhoto?'':'No photo · verified on paper · ')+col+' · unit '+u+'  —  '+t.done_by+' · '+fmtDate(t.done_at);
+  lbCap.textContent=note+col+' · unit '+u+'  —  '+t.done_by+' · '+fmtDate(t.done_at);
   lb.classList.add('show');
 }
 document.getElementById('lbClose').addEventListener('click', function(){ lb.classList.remove('show'); lbTarget=null; });
